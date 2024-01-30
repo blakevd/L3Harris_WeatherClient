@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+option go_package = "../common";
+
+message WeatherData {
+  string state = 1;
+  string station_name = 2;
+  string temp_f = 3;
+  string weather = 4;
+  string last_update = 5;
+  string station_ID = 6;
+}
