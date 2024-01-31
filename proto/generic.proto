@@ -46,7 +46,8 @@ message protobuf_error_response {
 }
 
 message protobuf_select_response {
-    repeated string response = 1;
+    string response = 1;
+    repeated bytes protobufs = 2;
 }
 
 service DBGeneric {
