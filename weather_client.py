@@ -64,10 +64,10 @@ def convert_to_mst(input_string):
     return output_string
 
 # Prints current MST
-def print_time():
+def print_time(msg):
     mst = pytz.timezone('US/Mountain')
     current_time_mst = datetime.now(mst).strftime('%Y-%m-%d %H:%M:%S')
-    print(f"Running at {current_time_mst}")
+    print(f"{msg}: {current_time_mst}")
 
 # Sets the Timer when to scrape weather data
 def set_timer():
@@ -90,17 +90,20 @@ def schedule_runner():
         schedule.run_pending()
         time.sleep(5 * 60) # Check every 5 min
 
+# Prints Server Response if not empty
+def handle_errors(errors):
+    if errors != []:
+        print(f"Server Response: {errors}")
+
 # Fetch all weather data for every Station in every State
 def run(server_address='localhost', server_port=50051):
-    print_time()
+    print_time("Start Data Collection")
     try:
         with grpc.insecure_channel(f'{server_address}:{server_port}') as channel:
             stub = generic_pb2_grpc.DBGenericStub(channel)
-
             # Get states info
             state_names, abbreviations = fetch_state_abbreviations()
             for state, abbreviation in zip(state_names, abbreviations):
-                print(state)
                 # Get stations for Given State
                 # Station codes are updated constantly. May show more/less if ran twice
                 stations = fetch_station_codes(abbreviation)
@@ -134,11 +137,11 @@ def run(server_address='localhost', server_port=50051):
                         )
                         # Send the request to the gRPC server
                         response = stub.Insert(request)
-                        # Print server response
-                        print(f"Server Response: {response.errs}")
+                        handle_errors(response.errs)
+
                     else:
                         print(f"No weather information available for station code {station_name}")
-
+            print_time("End Data Collection")
     except grpc.RpcError as e:
         print(f"Error communicating with gRPC server: {e}")
         print(f"Code: {e.code()}")
