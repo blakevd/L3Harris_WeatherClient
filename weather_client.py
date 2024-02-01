@@ -1,8 +1,11 @@
-import sys
 import os
+import sys
 import grpc
-import argparse
 import pytz
+import time
+import argparse
+import schedule
+import threading
 from datetime import datetime
 
 # Change directory to Routes so we can import the protobufs
@@ -39,6 +42,7 @@ def fetch_weather(station_code):
     from Scrapers.weatherscrape import fetch_weather_data
     return fetch_weather_data(station_code)
 
+# Converts any time to MST with given format
 # Input: Fri, 26 Jan 2024 08:53:00 -0700
 # Output: 2024-01-26 08:53:00 MST
 def convert_to_mst(input_string):
@@ -59,8 +63,36 @@ def convert_to_mst(input_string):
 
     return output_string
 
+# Prints current MST
+def print_time():
+    mst = pytz.timezone('US/Mountain')
+    current_time_mst = datetime.now(mst).strftime('%Y-%m-%d %H:%M:%S')
+    print(f"Running at {current_time_mst}")
+
+# Sets the Timer when to scrape weather data
+def set_timer():
+    while True:
+        try:
+            minutes = int(input("Enter the desired minutes past the hour to upload: "))
+            if 0 <= minutes <= 59:
+                break
+            else:
+                print("Invalid input. Please enter a value between 0 and 59.")
+        except ValueError:
+            print("Invalid input. Please enter a valid integer.")
+
+    schedule.every().hour.at(f":{minutes:02}").do(run, server_address=args.address, server_port=args.port)
+    print(f"Timer set to run at {minutes:02} minutes past the hour.")
+
+# Function to continuously run schedule.run_pending()
+def schedule_runner():
+    while True:
+        schedule.run_pending()
+        time.sleep(5 * 60) # Check every 5 min
+
 # Fetch all weather data for every Station in every State
 def run(server_address='localhost', server_port=50051):
+    print_time()
     try:
         with grpc.insecure_channel(f'{server_address}:{server_port}') as channel:
             stub = generic_pb2_grpc.DBGenericStub(channel)
@@ -125,12 +157,18 @@ if __name__ == "__main__":
     parser.add_argument('--port', type=int, default=50051, help='Port number for the gRPC server')  # Add --port argument
     args = parser.parse_args()
     print("Client listening at port: {}".format(args.port))  # Print the initial message
-    
+
+    # Start the scheduler thread
+    schedule_thread = threading.Thread(target=schedule_runner, daemon=True)
+    schedule_thread.start()
+
     # Check the entered flag and execute the corresponding task
     while True:
-        flag = input("Enter a specific flag <Run, Exit>: ").lower()
-        if flag == 'run':
+        flag = input("Enter a specific flag <Run, Timer, Exit>: ").lower()
+        if flag == 'run': # Scrape data now
             run(server_address=args.address, server_port=args.port)
+        elif flag == 'timer': # When to scrape data
+            set_timer()
         elif flag == 'exit':
             print("Exited Client.")
             break
