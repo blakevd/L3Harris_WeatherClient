@@ -1,12 +1,22 @@
+# Standard
 import os
 import sys
+# Enable server function
 import grpc
+import argparse
+# Enable Timing
 import pytz
 import time
-import argparse
 import schedule
 import threading
 from datetime import datetime
+# Enable Machine Learning
+import numpy as np
+import tensorflow as tf
+import keras
+from keras import layers, models
+from keras.models import Sequential
+from keras.layers import LSTM, Dense
 
 # Change directory to Routes so we can import the protobufs
 current_directory = sys.path[0]
@@ -73,7 +83,11 @@ def print_time(msg):
 def set_timer():
     while True:
         try:
-            minutes = int(input("Enter the desired minutes past the hour to upload: "))
+            user_input = input("Enter the desired minutes past the hour to upload (or type 'back' to cancel): ")
+            if user_input.lower() == "back":
+                print("Timer setting canceled.")
+                return
+            minutes = int(user_input)
             if 0 <= minutes <= 59:
                 break
             else:
@@ -152,6 +166,17 @@ def run(server_address='localhost', server_port=50051):
         traceback.print_exc()
         print(f"An unexpected error occurred: {e}")
 
+# Unfinished Test Code
+def test():
+    inputs = keras.Input(shape=(784,), name="digits")                       # Input layer, named Digits for debugging
+    x = layers.Dense(64, activation="relu", name="dense_1")(inputs)         # Creates first dense (fully connected layer) in neural network
+                                                                            # 64 Neurons, relu introduces non-linearity, named dense_1, connected to inputs
+    x = layers.Dense(64, activation="relu", name="dense_2")(x)              # Creates second dense layer, connected to x
+    outputs = layers.Dense(10, activation="softmax", name="predictions")(x) # Creates output layer, 10 neurons, softmax convert raw scores to probability, connected to x
+
+    model = keras.Model(inputs=inputs, outputs=outputs)                     # Creates whole Model object, specifies inputs/output layers (encaspulates dense_1/2)
+
+
 if __name__ == "__main__":
     add_parent_to_path()
     # Use argparse to handle command-line arguments
@@ -159,6 +184,7 @@ if __name__ == "__main__":
     parser.add_argument('--address', default='localhost', help='Address of the gRPC server')  # Add --address argument
     parser.add_argument('--port', type=int, default=50051, help='Port number for the gRPC server')  # Add --port argument
     args = parser.parse_args()
+    print("---Client Start---")
     print("Client listening at port: {}".format(args.port))  # Print the initial message
 
     # Start the scheduler thread
@@ -175,5 +201,7 @@ if __name__ == "__main__":
         elif flag == 'exit':
             print("Exited Client.")
             break
+        elif flag == 'predict':
+            test()
         else:
             print("Invalid flag. Please enter a valid flag.")
