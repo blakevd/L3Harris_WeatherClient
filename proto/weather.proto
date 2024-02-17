@@ -8,5 +8,11 @@ message WeatherData {
   string temp_f = 3;
   string weather = 4;
   string last_update = 5;
-  string station_ID = 6;
+  string station_id = 6;
+  string latitude = 7;
+  string longitude = 8;
+  string windchill_f = 9;
+  string relative_humidity = 10;
+  string wind_speed = 11;
+  string visibility = 12;
 }

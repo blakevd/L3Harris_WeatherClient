@@ -1,7 +1,7 @@
 # Standard
 import os
 import sys
-# Enable server function
+# Enable Server Function
 import grpc
 import argparse
 # Enable Timing
@@ -10,13 +10,7 @@ import time
 import schedule
 import threading
 from datetime import datetime
-# Enable Machine Learning
-import numpy as np
-import tensorflow as tf
-import keras
-from keras import layers, models
-from keras.models import Sequential
-from keras.layers import LSTM, Dense
+
 
 # Change directory to Routes so we can import the protobufs
 current_directory = sys.path[0]
@@ -79,7 +73,7 @@ def print_time(msg):
     current_time_mst = datetime.now(mst).strftime('%Y-%m-%d %H:%M:%S')
     print(f"{msg}: {current_time_mst}")
 
-# Sets the Timer when to scrape weather data
+# Sets the timer when to scrape weather data
 def set_timer():
     while True:
         try:
@@ -104,7 +98,7 @@ def schedule_runner():
         schedule.run_pending()
         time.sleep(5 * 60) # Check every 5 min
 
-# Prints Server Response if not empty
+# Prints server response if not empty
 def handle_errors(errors):
     if errors != []:
         print(f"Server Response: {errors}")
@@ -123,7 +117,8 @@ def run(server_address='localhost', server_port=50051):
                 stations = fetch_station_codes(abbreviation)
                 for station in stations:
                     # Fetch weather for a specific station code (e.g., KSLC)
-                    station_name, temperature, weather, last_update = fetch_weather(station)
+                    (station_name, temperature, weather, last_update, 
+                     latitude, longitude, windchill, relative_humidity, wind_speed, visibility) = fetch_weather(station)
                     mtn_datetime = convert_to_mst(last_update)
 
                     # Check if weather information is available
@@ -135,7 +130,13 @@ def run(server_address='localhost', server_port=50051):
                             temp_f=str(temperature), # Must be string, if station is down "N/A" is default
                             weather=weather,
                             last_update=mtn_datetime,
-                            station_ID=station
+                            station_id=station,
+                            latitude=str(latitude),
+                            longitude=str(longitude),
+                            windchill_f=str(windchill),
+                            relative_humidity=str(relative_humidity),
+                            wind_speed=str(wind_speed),
+                            visibility=str(visibility)
                         )
                         # Serialize the Protocol Buffer message
                         serial_data = weather_data_msg.SerializeToString()
@@ -166,21 +167,11 @@ def run(server_address='localhost', server_port=50051):
         traceback.print_exc()
         print(f"An unexpected error occurred: {e}")
 
-# Unfinished Test Code
-def test():
-    inputs = keras.Input(shape=(784,), name="digits")                       # Input layer, named Digits for debugging
-    x = layers.Dense(64, activation="relu", name="dense_1")(inputs)         # Creates first dense (fully connected layer) in neural network
-                                                                            # 64 Neurons, relu introduces non-linearity, named dense_1, connected to inputs
-    x = layers.Dense(64, activation="relu", name="dense_2")(x)              # Creates second dense layer, connected to x
-    outputs = layers.Dense(10, activation="softmax", name="predictions")(x) # Creates output layer, 10 neurons, softmax convert raw scores to probability, connected to x
-
-    model = keras.Model(inputs=inputs, outputs=outputs)                     # Creates whole Model object, specifies inputs/output layers (encaspulates dense_1/2)
-
 
 if __name__ == "__main__":
     add_parent_to_path()
     # Use argparse to handle command-line arguments
-    parser = argparse.ArgumentParser(description='Education gRPC Client')
+    parser = argparse.ArgumentParser(description='Weather gRPC Client')
     parser.add_argument('--address', default='localhost', help='Address of the gRPC server')  # Add --address argument
     parser.add_argument('--port', type=int, default=50051, help='Port number for the gRPC server')  # Add --port argument
     args = parser.parse_args()
@@ -201,7 +192,5 @@ if __name__ == "__main__":
         elif flag == 'exit':
             print("Exited Client.")
             break
-        elif flag == 'predict':
-            test()
         else:
             print("Invalid flag. Please enter a valid flag.")

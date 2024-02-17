@@ -28,8 +28,27 @@ def fetch_weather_data(station_code):
             observation_time = root.find('observation_time_rfc822')
             last_update = observation_time.text if observation_time is not None else "N/A"
 
+            latitude_element = root.find('latitude')
+            latitude = float(latitude_element.text) if latitude_element is not None else "N/A"
+
+            longitude_element = root.find('longitude')
+            longitude = float(longitude_element.text) if longitude_element is not None else "N/A"
+
+            windchill_element = root.find('windchill_f')
+            windchill = float(windchill_element.text) if windchill_element is not None else "N/A"
+
+            relative_humidity_element = root.find('relative_humidity')
+            relative_humidity = int(relative_humidity_element.text) if relative_humidity_element is not None else "N/A"
+
+            wind_speed_element = root.find('wind_mph')
+            wind_speed = float(wind_speed_element.text) if wind_speed_element is not None else "N/A"
+
+            visibility_element = root.find('visibility_mi')
+            visibility = float(visibility_element.text) if visibility_element is not None else "N/A"
+
             # Return data
-            return station_name, temperature, weather, last_update
+            return (station_name, temperature, weather, last_update, 
+                    latitude, longitude, windchill, relative_humidity, wind_speed, visibility)
 
         except etree.XMLSyntaxError as e:
             print(f"Error parsing XML: {e}")
