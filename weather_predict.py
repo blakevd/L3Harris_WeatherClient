@@ -4,6 +4,9 @@ import sys
 # Enable Server Function
 import grpc
 import argparse
+# Enable User Predictions
+import datetime
+import calendar
 # Enable Machine Learning
 import numpy as np
 import tensorflow as tf
@@ -114,50 +117,125 @@ def getStations(state_abbr):
     return fetch_station_codes(state_abbr)
 
 def train():
+    # Get data from weather_client
+    state_names, abbreviations = getStates()
+    for state, abbreviation in zip(state_names, abbreviations):
         # Get data from weather_client
-        state_names, abbreviations = getStates()
-        for state, abbreviation in zip(state_names, abbreviations):
-            # Get data from weather_client
-            stations = getStations(abbreviation)
-            for station in stations:
-                # Format into np arrays
-                lastUpdate, temperatures = getValuesFromStation(server_address=args.address, server_port=args.port, table_col = "station_id", col_constraint = station)
-                print(temperatures)
-                print(lastUpdate)
+        stations = getStations(abbreviation)
+        for station in stations:
+            # Format into np arrays
+            lastUpdate, temperatures = getValuesFromStation(server_address=args.address, server_port=args.port, table_col = "station_id", col_constraint = station)
+            print(temperatures)
+            print(lastUpdate)
 
         
         #build model
         #train
 
-        {
-        #     # Store 'station_ID' in 'stations' dictionary as Key if it doesn't exist
-        #     if weather_data.station_ID not in stations:
-        #         stations[weather_data.station_ID] = {}  # Initialize the dictionary for this station ID if it's not already present
 
-        #     # Store 'temp_f' in station_ID dictionary as Key
-        #     # Store values of temp_f
-        #     if 'temp_f' not in stations[weather_data.station_ID]:
-        #         stations[weather_data.station_ID]['temp_f'] = np.array([weather_data.temp_f])  # Initialize the numpy array
-        #     else:
-        #         stations[weather_data.station_ID]['temp_f'] = np.append(stations[weather_data.station_ID]['temp_f'], weather_data.temp_f)
+# Converts user inputs to datetime for predictions
+def compile_datetime(year, month, day, hour, minute):
+    return datetime.datetime(year, month, day, hour, minute)
 
-        #     # Debugging print
-        # for station_id, station_data in stations.items():
-        #     print(f"Station ID: {station_id}")
-        #     for key, value in station_data.items():
-        #         print(f"Key: {key}, Values: {value}")
-        }
+# Validates/standardizes user input to specific year
+# Returns 'None' if user aborts
+def get_year():
+    min_year = 2024  # Minimum allowed year
+    max_year = 2024  # Maximum allowed year
 
+    while True:
+        try:
+            user_input = input(f"Enter the year ({min_year}-{max_year}) (type 'back' to cancel): ")
+            if user_input.lower() == 'back':
+                return None
+            year = int(user_input)
+            if year < min_year or year > max_year:
+                raise ValueError
+            break
+        except ValueError:
+            print(f"Invalid year. Please enter a year between {min_year} and {max_year}.")
 
-# Unfinished test code
-def test():
-    inputs = keras.Input(shape=(784,), name="digits")                       # Input layer, named Digits for debugging
-    x = layers.Dense(64, activation="relu", name="dense_1")(inputs)         # Creates first dense (fully connected layer) in neural network
-                                                                            # 64 Neurons, relu introduces non-linearity, named dense_1, connected to inputs
-    x = layers.Dense(64, activation="relu", name="dense_2")(x)              # Creates second dense layer, connected to x
-    outputs = layers.Dense(10, activation="softmax", name="predictions")(x) # Creates output layer, 10 neurons, softmax convert raw scores to probability, connected to x
+    return year
 
-    model = keras.Model(inputs=inputs, outputs=outputs)                     # Creates whole Model object, specifies inputs/output layers (encaspulates dense_1/2)
+# Validates/standardizes user input to specific month
+# Returns 'None' if user aborts
+def get_month():
+    while True:
+        try:
+            user_input = input("Enter the month (e.g., 'December', 'Dec', or 12) (type 'back' to cancel): ")
+            if user_input.lower() == 'back':
+                return None
+            if user_input.isdigit():
+                month = int(user_input)
+                if month < 1 or month > 12:
+                    raise ValueError
+            else:
+                month_abbr = user_input[:3].capitalize()
+                month_full = user_input.capitalize()
+                month = list(calendar.month_abbr).index(month_abbr)
+                if month == 0:
+                    month = list(calendar.month_name).index(month_full)
+                    if month == 0:
+                        raise ValueError
+            break
+        except ValueError:
+            print("Invalid month input. Please enter a valid month")
+
+    return month
+
+# Validates/standardizes user input to specific day within specific month
+# Returns 'None' if user aborts
+def get_day(year, month):
+    while True:
+        try:
+            user_input = input(f"Enter the day (type 'back' to cancel): ")
+            if user_input.lower() == 'back':
+                return None
+            day = int(user_input)
+            max_day = calendar.monthrange(year, month)[1]
+            if day < 1 or day > max_day:
+                raise ValueError
+            break
+        except ValueError:
+            print(f"Invalid day. Please enter a day between 1 and {max_day} for the given month and year.")
+
+    return day
+
+# Validates/standardizes user input to specific time
+# Returns 'None' if user aborts
+def get_time():
+    while True:
+        try:
+            user_input = input("Enter the time (in 24-hour format HH:MM) (type 'back' to cancel): ")
+            if user_input.lower() == 'back':
+                return None, None
+            hour, minute = map(int, user_input.split(':'))
+            if hour < 0 or hour > 23 or minute < 0 or minute > 59:
+                raise ValueError("Invalid time format. Please enter a valid time in 24-hour format.")
+            break
+        except ValueError:
+            print("Invalid time input. Please enter a valid time")
+
+    return hour, minute
+
+# Driver method. Gets input from user for prediction target date
+# Returns 'None' if user aborts
+def get_user_target():
+    year = get_year()
+    if year is None:
+        return None
+    month = get_month()
+    if month is None:
+        return None
+    day = get_day(year, month)
+    if day is None:
+        return None
+    hour, minute = get_time()
+    if hour is None or minute is None:
+        return None
+
+    return compile_datetime(year, month, day, hour, minute)
+
 
 if __name__ == "__main__":
     # Use argparse to handle command-line arguments
@@ -172,7 +250,11 @@ if __name__ == "__main__":
     while True:
         flag = input("Enter a specific flag <Predict, Exit>: ").lower()
         if flag == 'predict':
-            pass
+            target_datetime = get_user_target()
+            if (target_datetime != None): # Debugging
+                print(target_datetime)
+            else:
+                print("User Aborted")
         elif flag == 'build': # Debugging - Not main function
             pass
         elif flag == 'train': # Debugging
