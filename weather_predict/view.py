@@ -36,13 +36,10 @@ class WeatherGUI:
         self.listbox.pack(side=tk.LEFT, fill=tk.Y, expand=False)
         self.listbox.bind("<<ListboxSelect>>", self.update_stations)
 
-        self.map_widget = tkintermapview.TkinterMapView(frame, width=800, height=600, corner_radius=0)
+        self.map_widget = tkintermapview.TkinterMapView(frame, width=1, height=1, corner_radius=0)
         self.map_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        self.map_widget.set_position(48.860381, 2.338594)  # Paris, France
-        self.map_widget.set_zoom(15)
-        
-        marker_1 = self.map_widget.set_marker(48.860381, 2.338594, text="Brandenburger Tor")
-
+        self.map_widget.set_position(39.0997, -94.5786)
+        self.map_widget.set_zoom(4)
 
     def update_stations(self, event):
         selected_index = self.listbox.curselection()
@@ -60,15 +57,20 @@ class WeatherGUI:
                 scrollbar_position = self.listbox.yview()[0]
                 # Clear the current state listbox
                 self.listbox.delete(0, tk.END)
-
+                self.map_widget.delete_all_marker()
                 # Re-populate the state listbox with the states and append stations under the selected state
                 for state in us.states.STATES:
                     state_name = state.name
                     self.listbox.insert(tk.END, " > " + state_name)
                     if state_name == selected_state:
-                        for station in self.stations:
-                            # Insert stations with a special tag "station"
-                            self.listbox.insert(tk.END, "    - " + station)
+                        for station_tuple in self.stations:
+                            station_name, latitude, longitude = station_tuple
+                            # Insert stations with a special tag "station is"
+                            self.listbox.insert(tk.END, f"    - {station_name}")
+                            longitude = (float(longitude))
+                            latitude = (float(latitude))
+                            self.map_widget.set_marker(latitude, longitude, text=station_name)
+                            
                 self.listbox.yview_moveto(scrollbar_position)
             elif selected_state.startswith("    - "):
                 selected_state = selected_state[6:]
@@ -119,7 +121,7 @@ class WeatherGUI:
 def get_stations_for_state(state):
     weather_data_array = run_select_query('state', state)
     # Extract 'station name' from each WeatherData instance
-    stations = list(set(weather_data.station_name for weather_data in weather_data_array))
+    stations = list(set((weather_data.station_name, str(weather_data.latitude), str(weather_data.longitude)) for weather_data in weather_data_array))
     return stations
 
 def run_select_query(column, constraint):
