@@ -275,6 +275,40 @@ def predict():
     else:
         print("User Aborted")
 
+# Get current time and setup predictions 3, 6, 12 hours in the future of a given station
+def predict_GUIGraph(target_station):
+    global state_stations
+
+    # Setup datetimes 3, 6, 12 from now
+    curr_time = datetime.now()
+    target_1 = compile_datetime(curr_time.year, curr_time.month, curr_time.day, (curr_time.hour + 1) % 24)
+    target_2 = compile_datetime(curr_time.year, curr_time.month, curr_time.day, (curr_time.hour + 2) % 24)
+    target_3 = compile_datetime(curr_time.year, curr_time.month, curr_time.day, (curr_time.hour + 3) % 24)
+    target_state = find_state_for_station(target_station, state_stations)
+
+    # Error check for state
+    if (target_state == None):
+        return 0, 0, 0
+
+    # Validate and preprocess input data
+    pre_result_1 = preprocess_input_data(target_1, target_state, target_station)
+    pre_result_2 = preprocess_input_data(target_2, target_state, target_station)
+    pre_result_3 = preprocess_input_data(target_3, target_state, target_station)
+
+    # Check for NaN values in input features
+    if np.isnan(pre_result_1).any():
+        print("Warning: NaN values detected in the preprocessed input features.")
+    if np.isnan(pre_result_2).any():
+        print("Warning: NaN values detected in the preprocessed input features.")
+    if np.isnan(pre_result_3).any():
+        print("Warning: NaN values detected in the preprocessed input features.")
+        
+    # Make prediction using the trained weather_model
+    result_1 = weather_model.predict(pre_result_1)
+    result_2 = weather_model.predict(pre_result_1)
+    result_3 = weather_model.predict(pre_result_1)
+    return result_1, result_2, result_3
+
 # Preprocesses target data to same format as training data
 # Uses 0 as placeholder for unk windchill/humidity
 def preprocess_input_data(datetime_str, state, station):
@@ -311,6 +345,13 @@ def preprocess_input_data(datetime_str, state, station):
     input_features = np.concatenate((state_encoded, station_encoded, month, day, year, time, humidity, windchill), axis=1)
     
     return input_features
+
+# Given a station find the state it belongs to
+def find_state_for_station(station, state_stations):
+    for state, stations in state_stations.items():
+        if station in stations:
+            return state
+    return None  # If station is not found in any state
 
 # Converts user inputs to datetime for predictions
 def compile_datetime(year, month, day, hour):
@@ -476,6 +517,10 @@ if __name__ == "__main__":
             select(server_address=args.address, server_port=args.port, table_col = column, col_constraint = constraint)
         elif flag == 'exit':
             print("Exited Client.")
+            break
+        elif flag == 'debug': # Updated to test various methods
+            print(find_state_for_station("KPDX", state_stations))
+            print(predict_GUIGraph("KSLC"))
             break
         else:
             print("Invalid flag. Please enter a valid flag.")
