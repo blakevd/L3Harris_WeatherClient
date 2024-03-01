@@ -12,11 +12,10 @@ import threading
 from datetime import datetime
 
 
-# Create an absolute path to the common directory
-common_directory = os.path.abspath(os.path.join(sys.path[0], '..', 'common'))
-
-# Add the common directory to the system path
-sys.path.insert(1, common_directory)
+# Change directory to Routes so we can import the protobufs
+current_directory = sys.path[0]
+routes_directory = current_directory + '/common'
+sys.path.insert(1, routes_directory)
 
 from google.protobuf import any_pb2
 import weather_pb2
