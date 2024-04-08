@@ -22,7 +22,7 @@ import weather_pb2
 import generic_pb2
 import generic_pb2_grpc
 
-def select(server_address='73.3.127.12', server_port=50051, table_col=None, col_constraint=None):
+def select(server_address='localhost', server_port=50051, table_col=None, col_constraint=None):
     weather_data_array = []
     # Connect to the gRPC server
     with grpc.insecure_channel(f'{server_address}:{server_port}') as channel:
